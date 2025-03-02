@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作物病害通 - 注册</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background-color: #f4f9f9;
+        }
+
+      .container {
+            display: flex;
+            width: 100%;
+        }
+
+      .left-section {
+            flex: 1;
+            max-width: 500px;
+            padding: 50px;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+      .logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+
+      .logo img {
+            width: 150px;
+            height: auto;
+            transition: none!important;
+        }
+
+      .left-section h1 {
+            font-size: 2.5rem;
+            color: #2B6A4F;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+      .left-section p.big {
+            font-size: 1.5rem;
+            color: #444;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+      .left-section p.small {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+      .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+      .input-group label {
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: 500;
+        }
+
+      .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            margin - bottom: 15px;
+        }
+
+      .input-group input:focus {
+            border-color: #2B6A4F;
+            box-shadow: 0 0 0 3px rgba(43, 106, 79, 0.2);
+        }
+
+      .gender-inputs {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+      .gender-inputs input {
+            margin-right: 5px;
+        }
+
+      .gender-inputs label {
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: 500;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            color: white;
+            background-color: #2B6A4F;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(43, 106, 79, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(43, 106, 79, 0.4);
+        }
+
+      .footer-links {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+      .footer-links a {
+            color: #2B6A4F;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+        }
+
+      .footer-links a:hover {
+            opacity: 0.8;
+        }
+
+      .social-logos {
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+      .social-logos img {
+            width: 24px;
+            height: 24px;
+            opacity: 0.7;
+            transition: none!important;
+        }
+
+      .copyright {
+            color: #888;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+      .right-section {
+            flex: 1;
+            background: url(../static/WebImages/back2.jpg) no-repeat center center/cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+      .intro {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+      .intro h2 {
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+      .intro p {
+            font-size: 1.1rem;
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+      .features {
+            font-size: 1rem;
+            color: #e0e0e0;
+            line-height: 1.8;
+        }
+
+      .features p {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="left-section">
+            <div class="logo">
+                <img src="../static/WebImages/croplogo.png" alt="Logo">
+            </div>
+            <h1>立即注册</h1>
+            <p class="big">开启精准农作物病害识别之旅</p>
+            <p class="small">注册账号，畅享更多功能。</p>
+            <form action="{{ url_for('user.register') }}" method="POST" onsubmit="return validateForm()">
+                <div class="input-group">
+                    <input type="text" name="Uphone" placeholder="输入手机号" required>
+                    <div id="phone - error" class="error - message"></div>
+                </div>
+                <div class="input-group">
+                    <input type="text" name="Uid" placeholder="设置账号" required>
+                </div>
+                <div class="input-group">
+                    <input type="text" name="Uname" placeholder="设置用户名" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="Upassword" placeholder="设置密码" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="confirmpassword" placeholder="再次输入确认密码" required>
+                </div>
+                <div class="gender - inputs">
+                    <label for="female">女</label>
+                    <input id="female" type="radio" name="Ugender" value="female" checked>
+                    <label for="male">男</label>
+                    <input id="male" type="radio" name="Ugender" value="male">
+                    <label for="unknown">保密</label>
+                    <input id="unknown" type="radio" name="Ugender" value="unknown">
+                </div>
+                <button type="submit" class="main - button">确认注册</button>
+            </form>
+            <div class="footer-links">
+                <p>已有账号？ <a href="{{ url_for('user.login') }}">立刻登录</a></p>
+            </div>
+            <div class="social-logos">
+                <img src="{{ url_for('static', filename='WebImages/icon1.png') }}" alt="Facebook Logo">
+                <img src="{{ url_for('static', filename='WebImages/icon2.png') }}" alt="Twitter Logo">
+                <img src="{{ url_for('static', filename='WebImages/icon3.png') }}" alt="Instagram Logo">
+                <img src="{{ url_for('static', filename='WebImages/icon4.png') }}" alt="LinkedIn Logo">
+            </div>
+            <div class="copyright">Copyright © 2025 My University. All Rights Reserved.</div>
+        </div>
+        <div class="right-section">
+            <div class="intro">
+                <h2>让科技助力农业发展</h2>
+                <p>我们提供精准的农作物病害识别解决方案，让您的农业生产更高效、更科学。</p>
+                <div class="features">
+                    <p>✔ 覆盖 50+ 种作物病害</p>
+                    <p>✔ 提供科学的防治建议</p>
+                    <p>✔ 数据安全，隐私无忧</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

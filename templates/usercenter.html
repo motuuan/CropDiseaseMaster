@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background: url('{{ url_for('static', filename='WebImages/back4.png') }}') no-repeat center/cover;
+            min-height: 100vh;
+        }
+
+        /* 头部样式 */
+        header {
+            background: rgba(40, 96, 67, 0.9);
+            padding: 12px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+       .logo img {
+            height: 40px;
+        }
+
+        /* 用户头像区域 */
+        .avatar-wrapper {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #fff url('avatar-icon.png') center/cover;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        .edit-badge {
+            position: absolute;
+            right: -5px;
+            bottom: -5px;
+            background: #fff;
+            padding: 3px 6px;
+            border-radius: 12px;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* 主体内容 */
+        .profile-container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 30px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            color: #2B6A4F;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        /* 表单样式 */
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            width: 120px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-content {
+            flex: 1;
+            color: #333;
+        }
+
+        .info-content input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .gender-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .gender-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 按钮样式 */
+        .action-buttons {
+            text-align: right;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-edit {
+            background: #2B6A4F;
+            color: #fff;
+        }
+
+        .btn-save {
+            background: #FFD700;
+            color: #333;
+            margin-left: 10px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* 隐藏编辑元素 */
+        .edit-mode {
+            display: none;
+        }.account-management-form select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .upload-overlay {
+            position: absolute;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            width: 100%;
+            padding: 8px;
+            text-align: center;
+            border-radius: 0 0 50% 50%;
+        }
+
+        .upload-label {
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .delete-account-form {
+            display: inline;
+        }
+
+        .link-button {
+            color: #dc3545;
+            text-decoration: none;
+            margin-left: 15px;
+        }
+        .avatar-upload-section {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .large-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #2B6A4F;
+            cursor: pointer;
+            background: #fff;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.3s;
+        }
+
+        .large-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .button-container {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+
+        .danger-actions {
+            gap: 25px;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .btn-danger:hover {
+            background: #bb2d3b;
+            transform: translateY(-2px);
+        }
+
+        .logout-btn {
+            background: #6c757d;
+        }
+
+        /* 调整容器定位 */
+        .profile-container {
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .edit-mode {
+            display: none;
+        }
+
+        .view-mode {
+            display: block;
+        }
+
+        .editing .view-mode {
+            display: none;
+        }
+
+        .editing .edit-mode {
+            display: block;
+        }
+
+        .back-home-container {
+            padding: 20px 30px;
+            position: relative;
+        }
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 15px;
+            background: #2B6A4F;
+            color: white !important;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .back-home:hover {
+            background: #1F4A38;
+            transform: translateY(-2px);
+        }
+        .back-home::before {
+            content: "←";
+            margin-right: 5px;
+        }
+
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <a href="{{ url_for('main.homepage') }}"><img src="../static/WebImages/croplogo-w.png"></a>
+        </div>
+        <a href="/user/profile" class="avatar-wrapper">
+            <img id="header-avatar" src="data:image/jpeg;base64,{{ user.Uheadshot }}" alt="用户头像" class="user-avatar">
+        </a>
+    </header>
+
+    <div class="back-home-container">
+        <a href="{{ url_for('main.homepage') }}" class="back-home">返回主页</a>
+    </div>
+
+    <div class="profile-container">
+        <div class="avatar-upload-section">
+            <div class="avatar-upload-wrapper">
+                <label for="avatarUpload">
+                    <img id="avatarPreview" class="large-avatar"
+                         src="data:image/jpeg;base64, {{user.Uheadshot  }}"
+                         alt="用户头像">
+                </label>
+                <input type="file" id="avatarUpload" name="Uheadshot" accept="image/*" style="display: none;">
+            </div>
+            <div>
+                <h2 class="section-title">个人信息</h2>
+                <p class="centered-text">用户账号: <span>{{ user.Uid }}</span></p>
+            </div>
+        </div>
+
+        <form id="updateForm" action="user/update_info" method="post">
+            <div class="info-item">
+                <div class="info-label">用户名</div>
+                <div class="info-content">
+                    <span class="view-mode">{{ user.Uname }}</span>
+                    <input type="text" class="edit-mode" name="Uname" value="{{ user.Uname }}" required>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">性别</div>
+                <div class="info-content">
+                    <span class="view-mode">{{ user.Ugender }}</span>
+                    <select class="edit-mode" name="Ugender" required>
+                        <option value="female">女</option>
+                        <option value="male">男</option>
+                        <option value="unknown">保密</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">电话号码</div>
+                <div class="info-content">
+                    <span class="view-mode">{{ user.Uphone }}</span>
+                    <input type="tel" class="edit-mode" name="Uphone" value="{{ user.Uphone }}" required>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">新密码</div>
+                <div class="info-content">
+                    <span class="view-mode">••••••••</span>
+                    <input type="password" class="edit-mode" name="Upassword">
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button type="button" class="btn btn-edit" onclick="toggleEdit()">编辑信息</button>
+                <button type="submit" class="btn btn-save edit-mode">保存修改</button>
+            </div>
+        </form>
+
+        <div class="button-container">
+            <div class="danger-actions">
+                <form id="logoutForm" action="/user/logout" method="POST" style="display: none;">
+                </form>
+                <form id="deleteForm" action="/user/delete" method="post" class="delete-account-form">
+                    <a href="#" class="btn-danger" onclick="return confirmDelete()">删除账号</a>
+                </form>
+                <a href="javascript:void(0);" class="btn-danger logout-btn" onclick="confirmLogout()">退出登录</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div id="deleteModal" style="display: none;">
+    </div>
+
+    <script>
+
+        function toggleEdit() {
+            const container = document.querySelector('.profile-container');
+            container.classList.toggle('editing');
+            if (!container.classList.contains('editing')) {
+                location.reload(); // 取消编辑时刷新页面恢复原状
+            }
+        }
+        // 监听表单提交
+        document.getElementById('updateForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止默认提交行为
+
+            const form = this;
+            const formData = new FormData(form);
+            const fileInput = document.getElementById('avatarUpload');
+
+            if (fileInput.files.length > 0) {
+                formData.append('Uheadshot', fileInput.files[0]); // 添加头像文件
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // 表单提交成功后，重载页面
+                    window.location.reload();
+                } else {
+                    alert('更新失败，请重试');
+                }
+            };
+
+            xhr.send(formData);
+        });
+
+
+        // 更新成功处理
+        function handleUpdateSuccess(data) {
+            if (data.newName) {
+                document.querySelectorAll('.view-mode').forEach(el => {
+                    if (el.textContent === data.newName) {
+                        el.textContent = data.newName;
+                    }
+                });
+            }
+
+            // 更新头像
+            if (data.newAvatar) {
+                document.getElementById('header-avatar').src = data.newAvatar;
+                document.querySelector('.large-avatar').style.backgroundImage = `url('${data.newAvatar}')`;
+            }
+
+            document.querySelector('.profile-container').classList.remove('editing');
+            showNotification('信息更新成功！', 'success');
+        }
+
+
+
+
+        // 显示通知
+        function showNotification(text, type = 'info') {
+            const existing = document.querySelector('.update-notification');
+            if (existing) existing.remove();
+
+            const notification = document.createElement('div');
+            notification.className = `update-notification ${type}`;
+            notification.textContent = text;
+
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // 添加通知样式
+        const style = document.createElement('style');
+        style.textContent = `
+            .update-notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 24px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease-out;
+            }
+            .success { background: #2B6A4F; }
+            .error { background: #dc3545; }
+            .info { background: #17a2b8; }
+
+            @keyframes slideIn {
+                from { transform: translateX(100%); }
+                to { transform: translateX(0); }
+            }
+        `;
+        document.head.appendChild(style);
+        function confirmDelete() {
+            if (confirm('确定要永久删除账号吗？\n此操作将删除所有数据且不可恢复！')) {
+                document.getElementById('deleteForm').submit();
+            }
+            return false;
+        }
+
+        function confirmLogout() {
+            if (confirm("确定要退出登录吗?")) {
+                document.getElementById('logoutForm').submit();
+            }
+        }
+
+        document.getElementById('avatarUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('header-avatar').src = event.target.result;
+                    document.querySelector('.large-avatar').style.backgroundImage = `url('${event.target.result}')`;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+    </script>
+</body>
+</html>

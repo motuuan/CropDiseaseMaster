@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作物病害通 - 作物识别</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+            background: url('{{ url_for('static', filename='WebImages/back4.png') }}') no-repeat center/cover;
+            position: relative;
+        }
+
+        /* 头部样式 */
+        header {
+            background: rgba(40, 96, 67, 0.9);
+            padding: 12px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+       .logo img {
+            height: 40px;
+        }
+
+        .nav-center {
+            display: flex;
+            gap: 40px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .nav-center a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            transition: opacity 0.3s;
+        }
+
+        .nav-center a:hover {
+            opacity: 0.8;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            overflow: hidden;
+        }
+        .user-avatar img{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 主体内容 */
+        .container {
+            display: flex;
+            gap: 30px;
+            padding: 40px;
+            height: calc(100vh - 120px);
+        }
+
+        /* 上传区域 */
+        .upload-box {
+            flex: 1;
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 400px;
+            z-index: 1;
+        }
+
+        .upload-preview {
+            width: 100%;
+            height: 100%;
+            background: url('{{ url_for('static', filename='WebImages/default-plant.png') }}') no-repeat center/contain;
+            position: absolute;
+            opacity: 0.3;
+            z-index: 2;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .upload-label {
+            background: #2B6A4F;
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+            position: relative;
+            z-index: 3;
+        }
+
+        .upload-label:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 识别结果区域 */
+        .result-box {
+            flex: 1;
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .result-title {
+            color: #2B6A4F;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .result-item {
+            margin: 18px 0;
+            font-size: 15px;
+        }
+
+        .result-item strong {
+            color: #444;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        /* 底部提示 */
+        .file-tips {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <a href="{{ url_for('main.homepage') }}"><img src="../static/WebImages/croplogo-w.png" alt="Logo"></a>
+        </div>
+        <div class="nav-center">
+            <a href="{{ url_for('main.homepage') }}">主页</a>
+            <a href="{{ url_for('main.recognition') }}">AI图像识别</a>
+            <a href="{{ url_for('main.document') }}">作物病症检索</a>
+            <a href="{{ url_for('main.record') }}">过往记录查询</a>
+        </div>
+        <div class="user-avatar" id="user-avatar" >
+            <a href="{{ url_for('main.usercenter') }}">
+                <img src="data:image/jpeg;base64,{{ user.Uheadshot }}" alt="用户头像" class="avatar">
+            </a>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 上传区域 -->
+        <div class="upload-box">
+            <div class="upload-preview" id="uploadPreview"></div>
+            <label for="fileInput" class="upload-label">点击上传作物照片</label>
+            <input type="file" id="fileInput" accept=".jpg, .jpeg, .png">
+            <div class="file-tips">支持上传格式：JPG/JPEG/PNG，最大5MB</div>
+        </div>
+
+        <!-- 识别结果 -->
+        <div class="result-box">
+            <h2 class="result-title">识别结果</h2>
+            <div class="result-item">
+                <strong>作物品种：</strong>
+                <span id="plantType">-</span>
+            </div>
+            <div class="result-item">
+                <strong>已识别到病害：</strong>
+                <span id="disease">-</span>
+            </div>
+            <div class="result-item">
+                <strong>建议解决方案：</strong>
+                <span id="solution">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        // 表单提交时触发的逻辑
+        document.getElementById('fileInput').addEventListener('change', function() {
+            let fileInput = document.getElementById('fileInput');
+            let formData = new FormData();
+
+            // 检查是否有文件
+            if (!fileInput.files.length) {
+                alert("请选择一张图片");
+                return;
+            }
+
+            // 创建一个文件读取器来读取图片
+            let file = fileInput.files[0];
+            let reader = new FileReader();
+
+            // 图片加载完成后，设置图片为预览区域背景
+            reader.onload = function(e) {
+                document.getElementById('uploadPreview').style.backgroundImage = `url(${e.target.result})`;
+            };
+
+            // 读取文件
+            reader.readAsDataURL(file);
+
+            formData.append('image_file', file);  // 添加文件到formData
+
+            // 使用 Fetch API提交文件
+            fetch('/crops/api/recognize', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("识别失败：" + data.error);
+                } else {
+                    document.getElementById('plantType').textContent = data.Cclass || '-';
+                    document.getElementById('disease').textContent = data.Cdisaster || '-';
+                    document.getElementById('solution').textContent = data.Csolution || '-';
+                }
+            })
+            .catch(error => {
+                console.error('上传错误:', error);
+                alert('上传失败，请稍后再试');
+            });
+        });
+    </script>
+</body>
+</html>

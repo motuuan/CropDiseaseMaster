@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作物病害通 - 主页</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f4f9f9;
+            background: url('{{ url_for('static', filename='WebImages/back3.png') }}') no-repeat center center/cover;
+            background-attachment: fixed;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 40px;
+            transition: none !important;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 25px;
+        }
+
+        nav ul li a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        nav ul li a:hover {
+            background: rgba(40, 96, 67, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .login-register {
+            display: flex;
+            gap: 12px;
+        }
+
+        .login-register a {
+            padding: 8px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .login {
+            background-color: #2B6A4F;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .register {
+            background-color: transparent;
+            color: #2B6A4F;
+            border: 2px solid #2B6A4F;
+        }
+
+        .login-register a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: calc(100vh - 100px);
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            z-index: 1;
+        }
+
+        .main-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            color: black;
+        }
+
+        .main-content p {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 20px;
+        }
+
+
+        .buttons a {
+            display: inline-block;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .ai-image-recognition {
+            background-color: #2B6A4F; /* 深绿色 */
+            color: white; /* 字体颜色白色 */
+            box-shadow: 0 4px 15px rgba(43,106,79,0.3);
+        }
+
+        .term-search {
+            background-color: white;
+            color: #2B6A4F;
+            border: 2px solid #2B6A4F;
+            box-shadow: 0 4px 15px rgba(43,106,79,0.2);
+        }
+
+        .buttons a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(43,106,79,0.4);
+        }
+
+        .social-media {
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .social-media img {
+            width: 28px;
+            height: 28px;
+            opacity: 0.7;
+            transition: none !important; /* 取消社交媒体动效 */
+        }
+
+        .user-profile img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .user-profile img:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <a href="{{ url_for('main.homepage') }}"><img src="{{ url_for('static', filename='WebImages/croplogo.png') }}"></a>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('main.homepage') }}">主页</a></li>
+                <li><a href="{{ url_for('main.recognition') }}" class="protected-link">AI图像识别</a></li>
+                <li><a href="{{ url_for('main.document') }}" class="protected-link">作物词条检索</a></li>
+                <li><a href="{{ url_for('main.record') }}" class="protected-link">过往记录查询</a></li>
+            </ul>
+        </nav>
+        {% if logged_in %}
+            <div class="user-profile" id="user-profile">
+                <a href="{{ url_for('main.usercenter') }}">
+                    <img src="data:image/jpeg;base64,{{ user.Uheadshot }}" alt="用户头像" class="avatar">
+                </a>
+            </div>
+        {% else %}
+            <div class="login-register" id="login-register">
+                <a href="{{ url_for('user.login') }}" class="login">登录</a>
+                <a href="{{ url_for('user.register') }}" class="register">注册</a>
+            </div>
+        {% endif %}
+    </header>
+
+    <div class="main-content">
+        <h1>我们提供高效的农业问题解决方案</h1>
+        <p>支持在线上传图片，免费识别作物病害种类；或者检索词条，了解相关资料！</p>
+        <div class="buttons">
+            <a href="{{ url_for('main.recognition') }}" class="ai-image-recognition">
+                AI图片识别
+            </a>
+            <a href="{{ url_for('main.document') }}" class="term-search">
+                词条检索
+            </a>
+        </div>
+    </div>
+
+    <div class="social-media">
+        <a href="#"><img src="{{ url_for('static', filename='WebImages/icon1.png') }}"></a>
+        <a href="#"><img src="{{ url_for('static', filename='WebImages/icon2.png') }}"></a>
+        <a href="#"><img src="{{ url_for('static', filename='WebImages/icon3.png') }}"></a>
+        <a href="#"><img src="{{ url_for('static', filename='WebImages/icon4.png') }}"></a>
+    </div>
+
+    <script>
+
+        let isLoggedIn = {{ logged_in|tojson }};
+        document.addEventListener('DOMContentLoaded', () => {
+        if (document.getElementById('user-profile')) {
+            document.getElementById('login-register').style.display = 'none';
+        }
+
+        // 限制未登录用户访问受保护内容
+        document.querySelectorAll('.protected-btn, .protected-link, .buttons').forEach(element => {
+            element.addEventListener('click', (event) => {
+                if (!isLoggedIn) {
+                    event.preventDefault();
+                    window.location.href = "{{ url_for('user.login') }}";  // 跳转到登录页面
+                }
+            });
+        });
+    });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作物病害通 - 登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            background-color: #f4f9f9;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+        }
+
+        /* 左侧登录区域 */
+        .left-section {
+            flex: 1;
+            max-width: 500px;
+            padding: 50px;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .left-section .logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+
+        .left-section .logo img {
+            width: 150px;
+            height: auto;
+            transition: none !important;
+        }
+
+        .left-section h1 {
+            font-size: 2.5rem;
+            color: #2B6A4F;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .left-section p.big {
+            font-size: 1.5rem;
+            color: #444;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .left-section p.small {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .left-section form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .left-section .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .left-section .input-group label {
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .left-section .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .left-section .input-group input:focus {
+            border-color: #2B6A4F;
+            box-shadow: 0 0 0 3px rgba(43, 106, 79, 0.2);
+        }
+
+        .left-section button {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            color: white;
+            background-color: #2B6A4F;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(43, 106, 79, 0.3);
+        }
+
+        .left-section button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(43, 106, 79, 0.4);
+        }
+
+        .left-section .footer-links {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .left-section .footer-links a {
+            color: #2B6A4F;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+        }
+
+        .left-section .footer-links a:hover {
+            opacity: 0.8;
+        }
+
+        .left-section .social-logos {
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .left-section .social-logos img {
+            width: 24px;
+            height: 24px;
+            opacity: 0.7;
+            transition: none !important;
+        }
+
+        .left-section .copyright {
+            color: #888;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* 右侧展示区域 */
+        .right-section {
+            flex: 1;
+            background: url(../static/WebImages/back2.jpg) no-repeat center center/cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .right-section .intro {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .right-section .intro h2 {
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .right-section .intro p {
+            font-size: 1.1rem;
+            color: #f0f0f0;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .right-section .intro .features {
+            font-size: 1rem;
+            color: #e0e0e0;
+            line-height: 1.8;
+        }
+
+        .right-section .intro .features p {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 左侧登录区域 -->
+        <div class="left-section">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='WebImages/croplogo.png') }}" alt="Logo">
+            </div>
+            <h1>欢迎登录</h1>
+            <p class="big">高效检测农作物病害</p>
+            <p class="small">现在就登入，探索完整功能！</p>
+
+            <!-- 表单提交方式更新 -->
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="Uid">账号</label>
+                    <input type="text" id="Uid" name="Uid" placeholder="请输入您的账号" required>
+                </div>
+                <div class="input-group">
+                    <label for="Upassword">密码</label>
+                    <input type="password" id="Upassword" name="Upassword" placeholder="请输入您的密码" required>
+                </div>
+                <button type="submit">登录</button>
+            </form>
+
+            <div class="footer-links">
+                <p>还没有账号？<a href="{{ url_for('user.register') }}">立刻注册</a></p>
+            </div>
+            <div class="social-logos">
+                <img src="{{ url_for('static', filename='WebImages/icon1.png') }}" alt="Facebook Logo">
+                <img src="{{ url_for('static', filename='WebImages/icon2.png') }}" alt="Twitter Logo">
+                <img src="{{ url_for('static', filename='WebImages/icon3.png') }}" alt="Instagram Logo">
+                <img src="{{ url_for('static', filename='WebImages/icon4.png') }}" alt="LinkedIn Logo">
+            </div>
+            <div class="copyright">Copyright © 2025 My University. All Rights Reserved.</div>
+        </div>
+
+        <!-- 右侧展示区域 -->
+        <div class="right-section">
+            <div class="intro">
+                <h2>让科技助力农业发展</h2>
+                <p>我们提供精准的农作物病害识别解决方案，让您的农业生产更高效、更科学。</p>
+                <div class="features">
+                    <p>✔ 覆盖 50+ 种作物病害</p>
+                    <p>✔ 提供科学的防治建议</p>
+                    <p>✔ 数据安全，隐私无忧</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault(); // 阻止默认提交行为
+
+            const formData = new FormData(event.target);
+
+            try {
+                const response = await fetch("{{ url_for('user.login') }}", {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('token', data.token); // 存储 Token
+                    window.location.href = "{{ url_for('main.homepage') }}"; // 跳转到主页
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                alert('登录过程中发生错误，请稍后重试');
+            }
+        });
+    });
+    </script>
+</body>
+
+
+</html>
