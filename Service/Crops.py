@@ -6,7 +6,7 @@ from flask import jsonify
 from Model.Crops import Crops
 from ultralytics import YOLO
 import torchvision.transforms as transforms
-import math
+import re
 from torch import nn
 from torchvision import models
 
@@ -22,79 +22,62 @@ except Exception as e:
     print(f"Error loading YOLO model: {str(e)}")
     yolo_model = None
 
+img_size = 128
 
-# 注意力机制模块
-class CBAM(nn.Module):
-    def __init__(self, channels, reduction_ratio=16):
-        super(CBAM, self).__init__()
-        self.channel_attention = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(channels, channels // reduction_ratio, kernel_size=1),
+
+# 定义 SE 注意力模块
+class SEBlock(nn.Module):
+    def __init__(self, in_channels, reduction=16):
+        super().__init__()
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(in_channels, in_channels // reduction),
             nn.ReLU(inplace=True),
-            nn.Conv2d(channels // reduction_ratio, channels, kernel_size=1),
+            nn.Linear(in_channels // reduction, in_channels),
             nn.Sigmoid()
         )
-        self.spatial_attention = nn.Sequential(
-            nn.Conv2d(2, 1, kernel_size=7, padding=3),
-            nn.Sigmoid()
-        )
+        for m in self.fc:
+            if isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        ca = self.channel_attention(x)
-        x = x * ca
-        max_pool = torch.max(x, dim=1, keepdim=True)[0]
-        avg_pool = torch.mean(x, dim=1, keepdim=True)
-        sa = self.spatial_attention(torch.cat([max_pool, avg_pool], dim=1))
-        return x * sa
-
-
-class ECABlock(nn.Module):
-    def __init__(self, channels, gamma=2, b=1):
-        super(ECABlock, self).__init__()
-        kernel_size = int(abs((math.log(channels, 2) + b) / gamma))
-        kernel_size = kernel_size if kernel_size % 2 else kernel_size + 1
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.conv = nn.Conv1d(1, 1, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, bias=False)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        y = self.avg_pool(x)
-        y = self.conv(y.squeeze(-1).transpose(-1, -2))
-        y = y.transpose(-1, -2).unsqueeze(-1)
-        y = self.sigmoid(y)
-        return x * y.expand_as(x)
+        b, c, _, _ = x.shape
+        y = self.avgpool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y
 
 
 # 增强版VGG模型
-class EnhancedVGG(nn.Module):
+class BasicVGG(nn.Module):
     def __init__(self, num_classes):
-        super(EnhancedVGG, self).__init__()
+        super().__init__()
         original_vgg = models.vgg16(pretrained=False)
-        self.features = nn.Sequential()
-        conv_layers = list(original_vgg.features.children())
-        attention_positions = [24, 28, 30]
 
-        for i, layer in enumerate(conv_layers):
-            self.features.add_module(str(i), layer)
-            if i in attention_positions:
-                if i == 24:
-                    self.features.add_module(f'cbam_{i}', CBAM(512))
-                else:
-                    self.features.add_module(f'eca_{i}', ECABlock(512))
+        # 完全复现训练代码的特征层结构
+        self.features = nn.Sequential(
+            *list(original_vgg.features.children())[:3],
+            SEBlock(64),
+            *list(original_vgg.features.children())[3:7],
+            SEBlock(128),
+            *list(original_vgg.features.children())[7:14],
+            SEBlock(256),
+            original_vgg.features[14]
+        )
 
-        self._dummy_input = torch.zeros(1, 3, 128, 128)
+        # 动态维度计算（必须保留）
         with torch.no_grad():
-            self._dummy_output = self.features(self._dummy_input)
-        num_features = self._dummy_output.numel()
+            test_input = torch.randn(1, 3, 128, 128)
+            test_output = self.features(test_input)
+            in_features = test_output.view(-1).shape[0]
 
+        # 完全复现训练代码的分类器
         self.classifier = nn.Sequential(
-            nn.Linear(num_features, 4096),
-            nn.ReLU(True),
-            nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
-            nn.ReLU(True),
-            nn.Dropout(0.5),
-            nn.Linear(4096, num_classes)
+            nn.Linear(in_features, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(512, num_classes)
         )
 
     def forward(self, x):
@@ -121,26 +104,52 @@ class CropTypeModel:
                                  'Rice___Leaf_Blast', 'Rice___Neck_Blast', 'Wheat___Brown_Rust',
                                  'Wheat___Healthy', 'Wheat___Yellow_Rust', 'sugarcane___Bacterial Blight',
                                  'sugarcane___Healthy', 'sugarcane___Red Rot']
+
         try:
-            self.model = EnhancedVGG(num_classes=num_classes)
+            self.model = BasicVGG(num_classes=num_classes)
             state_dict = torch.load(model_path, map_location='cpu')
 
-            new_state_dict = {}
-            for k, v in state_dict.items():
-                if k.startswith('module.'):
-                    new_state_dict[k[7:]] = v
-                else:
-                    new_state_dict[k] = v
+            # ---------- 添加这段代码：修正模型权重的键名 ----------
+            def fix_state_dict_keys(state_dict):
+                """去掉多余的 'features.' 前缀（如 'features.features.' -> 'features.'）"""
+                new_state_dict = {}
+                for k, v in state_dict.items():
+                    if k.startswith("features.features."):
+                        new_key = k.replace("features.features.", "features.")
+                    else:
+                        new_key = k
+                    new_state_dict[new_key] = v
+                return new_state_dict
 
-            self.model.load_state_dict(new_state_dict)
-            self.model = self.model.to(device).float()
-            self.model.eval()
+            # 应用键名修复
+            state_dict = fix_state_dict_keys(state_dict)
+
+            # 获取模型结构中允许的 key
+            model_keys = set(self.model.state_dict().keys())
+
+            # 自动过滤 + 修正后的最终 state_dict
+            filtered_dict = {k: v for k, v in state_dict.items() if k in model_keys}
+
+            # 强制维度验证 -----------------------------------------------------
+            with torch.no_grad():
+                dummy_input = torch.randn(1, 3, 128, 128)
+                features_out = self.model.features(dummy_input)
+                actual_in_features = features_out.view(1, -1).shape[1]
+
+                expected_in_features = filtered_dict['classifier.0.weight'].shape[1]
+
+                assert actual_in_features == expected_in_features, \
+                    f"维度不匹配！模型实际输入: {actual_in_features}, 参数期望输入: {expected_in_features}"
+
+            # 加载参数
+            self.model.load_state_dict(filtered_dict, strict=True)
 
             self.transform = transforms.Compose([
                 transforms.Resize((128, 128)),
                 transforms.ToTensor(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
+            self.model = self.model.to(device).eval()
             print("Crop classification model loaded successfully")
         except Exception as e:
             print(f"Error loading crop model: {str(e)}")
@@ -163,7 +172,7 @@ class CropTypeModel:
 
 try:
     crop_type_model = CropTypeModel(
-        model_path="D:/pyproj/GraduateProject/Data/enhance_f_vgg.pth",
+        model_path="D:/pyproj/GraduateProject/Data/SE7_vgg.pth",
         num_classes=17
     )
 except Exception as e:
@@ -178,19 +187,24 @@ class CropsService:
         'Corn___Common_Rust': '玉米普通锈病',
         'Corn___Gray_Leaf_Spot': '玉米灰斑病',
         'Corn___Northern_Leaf_Blight': '玉米大斑病',
+        'Corn___Healthy': '健康',
         # Potato
         'Potato___Early_Blight': '马铃薯早疫病',
         'Potato___Late_Blight': '马铃薯晚疫病',
+        'Potato___Healthy': '健康',
         # Rice
         'Rice___Brown_Spot': '水稻胡麻斑病',
         'Rice___Leaf_Blast': '水稻稻瘟病',
         'Rice___Neck_Blast': '水稻穗颈瘟',
+        'Rice___Healthy': '健康',
         # Wheat
         'Wheat___Brown_Rust': '小麦杆锈病',
         'Wheat___Yellow_Rust': '小麦条锈病',
+        'Wheat___Healthy': '健康',
         # Sugarcane
-        'sugarcane___Bacterial Blight': '甘蔗白条病',
-        'sugarcane___Red Rot': '甘蔗赤腐病',
+        'sugarcane__Bacterial Blight': '甘蔗白条病',
+        'sugarcane__Red Rot': '甘蔗赤腐病',
+        'sugarcane__Healthy': '健康',
         # Healthy
         'Healthy': '健康'
     }
@@ -235,6 +249,7 @@ class CropsService:
             if crop_type_model:
                 try:
                     crop_class = crop_type_model.predict(image)
+                    print(f"作物识别结果: {crop_class}")  # 调试输出
                 except Exception as e:
                     print(f"作物识别错误: {str(e)}")
 
@@ -242,9 +257,8 @@ class CropsService:
             disease_data = []
             if yolo_model and crop_class != "未知作物":
                 try:
-                    # 动态参数调整
-                    conf_threshold = 0.3 if "玉米" in crop_class else 0.25
-                    iou_threshold = 0.5 if "马铃薯" in crop_class else 0.45
+                    conf_threshold = 0.3
+                    iou_threshold = 0.45
 
                     yolo_results = yolo_model.predict(
                         np.array(image),
@@ -256,24 +270,22 @@ class CropsService:
                         agnostic_nms=True
                     )
 
-                    # 处理并过滤结果
                     raw_results = CropsService.process_yolo_results(yolo_results)
+
+                    # 只保留和当前作物相关的病害结果
                     filtered = [res for res in raw_results
                                 if CropsService.is_related_disease(crop_class, res['class_name'])]
 
-                    # 转换为中文并查询数据库
-                    for disease in filtered:
-                        en_name = disease['class_name'].replace(' ', '_')  # 统一为下划线格式
-                        zh_name = CropsService.YOLO_DISEASE_MAPPING.get(
-                            disease['class_name'],  # 原始名称查询
-                            CropsService.YOLO_DISEASE_MAPPING.get(
-                                en_name,  # 下划线格式查询
-                                disease['class_name']))  # 如果都没有匹配到，返回原始名称
+                    if filtered:
+                        # 找出置信度最高的一个病害结果
+                        best_result = max(filtered, key=lambda x: x['confidence'])
 
-                        # 数据库查询
+                        original_name = best_result['class_name']
+                        zh_name = CropsService.YOLO_DISEASE_MAPPING.get(original_name, original_name)
+
                         record = Crops.query.filter(
                             Crops.Cclass == crop_class,
-                            Crops.Cdisaster == zh_name  # 改为精确匹配
+                            Crops.Cdisaster == zh_name
                         ).first()
 
                         if record:
@@ -286,6 +298,8 @@ class CropsService:
                                 'Cdisaster': zh_name,
                                 'Csolution': "暂无防治方案"
                             })
+                    else:
+                        print("未检测到相关病害")
 
                 except Exception as e:
                     print(f"病害检测错误: {str(e)}")
@@ -311,11 +325,11 @@ class CropsService:
     @staticmethod
     def is_related_disease(crop_type, disease_name):
         disease_mapping = {
-            '玉米': ['Common_Rust', 'Gray_Leaf_Spot', 'Northern_Leaf_Blight'],
-            '马铃薯': ['Early_Blight', 'Late_Blight'],
-            '水稻': ['Brown_Spot', 'Leaf_Blast', 'Neck_Blast'],
-            '小麦': ['Brown_Rust', 'Yellow_Rust'],
-            '甘蔗': ['Bacterial Blight', 'Red Rot']
+            '玉米': ['Common_Rust', 'Gray_Leaf_Spot', 'Healthy', 'Northern_Leaf_Blight'],
+            '马铃薯': ['Early_Blight', 'Healthy', 'Late_Blight'],
+            '水稻': ['Brown_Spot', 'Healthy', 'Leaf_Blast', 'Neck_Blast'],
+            '小麦': ['Brown_Rust', 'Healthy', 'Yellow_Rust'],
+            '甘蔗': ['Bacterial Blight', 'Healthy', 'Red Rot']
         }
         return any(
             keyword in disease_name

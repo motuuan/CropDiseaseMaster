@@ -3,10 +3,12 @@ import base64
 from GP_config import app
 from Service.Users import user_service
 from Routes.Crops import crops_routes
+from Routes.Records import records_routes
 from Model.Crops import Crops
 
 main = Blueprint('main', __name__)
 app.register_blueprint(crops_routes, url_prefix='/crops')
+app.register_blueprint(records_routes, url_prefix='/records')
 
 @main.route('/')
 def homepage():
@@ -36,6 +38,13 @@ def record():
     if 'user_id' in session:
         user = user_service.get_user_info(session['user_id'])  # 获取用户信息
     return render_template('record.html', user=user, logged_in=(user is not None))
+
+@main.route('/recordchart')
+def recordchart():
+    user = None
+    if 'user_id' in session:
+        user = user_service.get_user_info(session['user_id'])  # 获取用户信息
+    return render_template('recordchart.html', user=user, logged_in=(user is not None))
 
 
 @main.route('/disease_detail/<int:crop_id>', methods=['GET'])

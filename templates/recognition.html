@@ -208,6 +208,10 @@
 
     <script>
 
+        let user = {{ user|tojson }};
+        if (user && user.Uid) {
+            localStorage.setItem("user_id", user.Uid);  // 存入localStorage
+        }
         // 表单提交时触发的逻辑
         document.getElementById('fileInput').addEventListener('change', function() {
             let fileInput = document.getElementById('fileInput');
@@ -230,6 +234,13 @@
 
             // 读取文件
             reader.readAsDataURL(file);
+
+            let userId = localStorage.getItem("user_id");  // 读取用户 ID
+            if (!userId) {
+                alert("未登录用户，无法识别！");
+                return;
+            }
+            formData.append("user_id", userId);  // 传递 user_id
 
             formData.append('image_file', file);  // 添加文件到formData
 

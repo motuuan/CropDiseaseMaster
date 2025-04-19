@@ -46,7 +46,7 @@ class User_operation():
         try:
             user = Users.query.filter_by(Uid=Uid).first()
             if not user:
-                return jsonify({'code': -1, 'message': '用户不存在'})
+                return {'code': -1, 'message': '用户不存在'}
 
             user.Uname = Uname
             user.Ugender = Ugender
@@ -57,23 +57,24 @@ class User_operation():
 
             if Upassword:
                 if len(Upassword) < 8:
-                    return jsonify({'code': -2, 'message': '密码至少需要8位'})
+                    return {'code': -2, 'message': '密码至少需要8位'}
                 user.Upassword = generate_password_hash(Upassword)
+
 
             db.session.commit()
 
-            return jsonify({
+
+            return {
                 'code': 0,
                 'message': '更新成功',
                 'data': {
-                    'Uname': user.Uname,
-                    'Uheadshot': user.Uheadshot
+                    'Uname': user.Uname
                 }
-            })
+            }
 
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            return jsonify({'code': -3, 'message': '数据库错误'})
+            return {'code': -3, 'message': '数据库错误'}
 
     def delete_user(self, Uid):
         user = Users.query.filter_by(Uid=Uid).first()

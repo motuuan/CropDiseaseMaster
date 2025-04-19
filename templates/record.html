@@ -1,10 +1,238 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>识图记录 - 作物病害通</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+            background: url('{{ url_for('static', filename='WebImages/back4.png') }}') no-repeat center/cover;
+            position: relative;
+        }
+        header {
+            background: rgba(40, 96, 67, 0.9);
+            padding: 12px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        .logo img {
+            height: 40px;
+        }
+        .nav-center {
+            display: flex;
+            gap: 40px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .nav-center a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            transition: opacity 0.3s;
+        }
+        .nav-center a:hover {
+            opacity: 0.8;
+        }
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            overflow: hidden;
+        }
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .container {
+            padding: 40px;
+        }
+        .records-title {
+            color: #2B6A4F;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .record-list {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .record-item {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s;
+        }
+        .record-item:hover {
+            transform: translateY(-5px);
+        }
+        .record-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin-right: 20px;
+        }
+        .record-info {
+            flex: 1;
+        }
+        .record-title {
+            color: #2B6A4F;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        .record-time {
+            color: #666;
+            font-size: 14px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .page-button {
+            background: #2B6A4F;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .page-button:hover {
+            opacity: 0.8;
+        }
+        .chart-button {
+            background: #ff9800;
+            color: white;
+            font-weight: bold;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            margin-bottom: 20px;
+            text-align: center;
+            width: 150px;
+        }
+        .chart-button:hover {
+            opacity: 0.8;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <div class="logo">
+            <a href="{{ url_for('main.homepage') }}"><img src="../static/WebImages/croplogo-w.png" alt="Logo"></a>
+        </div>
+        <div class="nav-center">
+            <a href="{{ url_for('main.homepage') }}">主页</a>
+            <a href="{{ url_for('main.recognition') }}">AI图像识别</a>
+            <a href="{{ url_for('main.document') }}">作物病症检索</a>
+            <a href="{{ url_for('main.record') }}">过往记录查询</a>
+        </div>
+        <div class="user-avatar" id="user-avatar">
+            <a href="{{ url_for('main.usercenter') }}">
+                <img src="data:image/jpeg;base64,{{ user.Uheadshot }}" alt="用户头像" class="avatar">
+            </a>
+        </div>
+    </header>
+    <div class="container">
+        <h2 class="records-title">识图记录</h2>
+        <button class="chart-button" onclick="location.href='{{ url_for('main.recordchart') }}'">记录统计</button>
+        <div class="record-list" id="record-list"></div>
+        <div class="pagination">
+            <button id="prev-button" class="page-button" onclick="changePage(-1)">上一页</button>
+            <span id="page-info">第 1 页</span>
+            <button id="next-button" class="page-button" onclick="changePage(1)">下一页</button>
+        </div>
+    </div>
+    <script>
+        let user = {{ user|tojson }};
+        if (user && user.Uid) {
+            localStorage.setItem("user_id", user.Uid);  // 存入localStorage
+        }
+
+        let currentPage = 1;
+        let totalPages = 1;
+
+        function fetchRecords(page) {
+            let userId = localStorage.getItem("user_id"); // 从 localStorage 读取用户 ID
+            if (!userId) {
+                console.error("用户未登录");
+                return;
+            }
+
+            fetch(`/records/getrecord?user_id=${userId}&page=${page}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP 错误: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    let recordList = document.getElementById('record-list');
+                    recordList.innerHTML = '';
+
+                    if (data.records.length === 0) {
+                        recordList.innerHTML = '<p class="no-records">暂无识别记录</p>';
+                    } else {
+                        data.records.forEach(record => {
+                            let item = document.createElement('div');
+                            item.classList.add('record-item');
+                            item.innerHTML = `
+                                <img src="data:image/jpeg;base64,${record.image}" class="record-image">
+                                <div class="record-info">
+                                    <h3 class="record-title">${record.crop_name} - ${record.disease_name}</h3>
+                                    <p class="record-time">识别时间: ${record.time}</p>
+                                </div>
+                            `;
+                            recordList.appendChild(item);
+                        });
+                    }
+
+                    currentPage = data.current_page;
+                    totalPages = data.total_pages;
+
+                    document.getElementById('page-info').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+                    document.getElementById('prev-button').disabled = currentPage <= 1;
+                    document.getElementById('next-button').disabled = currentPage >= totalPages;
+                })
+                .catch(error => console.error('获取记录失败:', error));
+        }
+
+        function changePage(offset) {
+            if ((offset === -1 && currentPage > 1) || (offset === 1 && currentPage < totalPages)) {
+                fetchRecords(currentPage + offset);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            fetchRecords(currentPage);
+        });
+    </script>
 
 </body>
 </html>

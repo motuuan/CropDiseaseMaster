@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from Service.Crops import CropsService
 from Model.Crops import Crops
+from Service.Records import RecordsService
 
 # 创建Blueprint
 crops_routes = Blueprint('crops_routes', __name__)
@@ -30,15 +31,25 @@ def recognize():
     file = request.files["image_file"]
 
     if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400  # 返回错误响应
+        return jsonify({"error": "No selected file"}), 400
+
+    user_id = request.form.get("user_id")  # 获取用户 ID
 
     try:
         # 处理上传的图片
         result = CropsService.output_results(file)
         if result is None:
-            return jsonify({"error": "No results found"}), 400  # 处理没有返回的情况
+            return jsonify({"error": "No results found"}), 400
 
-        return result  # 返回识别结果
+        # 解析识别结果
+        response_data = result.get_json()
+        crop_class = response_data.get("Cclass", "未知作物")
+        disease_name = response_data.get("Cdisaster", "-")
+
+        # 保存识别记录
+        save_result = RecordsService.save_record(user_id, file, crop_class, disease_name)
+
+        return jsonify({**response_data, **save_result})
     except Exception as e:
         print(f"Error processing image: {e}")
         return jsonify({"error": f"Failed to process the image: {str(e)}"}), 500  # 错误处理

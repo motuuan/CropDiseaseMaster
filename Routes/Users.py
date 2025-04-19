@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, url_for, session, render_template, flash, jsonify
+from flask import Blueprint, request, redirect, url_for, session, render_template, flash, jsonify,Response
 from flask_login import logout_user, current_user
 import os
 from datetime import datetime
@@ -94,33 +94,42 @@ def forgot_password():
     return result
 
 
+@user.route('/avatar/<uid>')
+def get_user_avatar(uid):
+    try:
+        user = session['user_id']
+        if not user or not user.Uheadshot:
+            return '', 404  # 如果没有头像或用户不存在
+
+        img_data = base64.b64decode(user.Uheadshot)
+        return Response(img_data, mimetype='image/png')  # 或根据实际头像格式换成 image/jpeg
+
+    except Exception as e:
+        return '', 500
+
+
 @user.route('/update_info', methods=['POST'])
 def update_info():
     if 'user_id' not in session:
-        flash('请先登录！', 'error')
-        return redirect(url_for('user.login'))
+        return jsonify({'success': False, 'message': '未登录'}), 401
 
     user_id = session['user_id']
 
     try:
-        # 获取表单数据
         update_data = {
             'Uname': request.form.get('Uname'),
             'Ugender': request.form.get('Ugender'),
             'Uphone': request.form.get('Uphone'),
-            'Upassword': request.form.get('Upassword') or None  # 密码可选
+            'Upassword': request.form.get('Upassword') or None
         }
 
-        # 基础验证
         if not all([update_data['Uname'], update_data['Ugender'], update_data['Uphone']]):
-            flash('必填字段不能为空', 'error')
-            return redirect(url_for('usercenter'))  # 失败后重定向到个人中心
+            return jsonify({'success': False, 'message': '必填字段不能为空'}), 400
 
         if len(update_data['Uphone']) != 11 or not update_data['Uphone'].isdigit():
-            flash('手机号格式不正确', 'error')
-            return redirect(url_for('usercenter'))
+            return jsonify({'success': False, 'message': '手机号格式错误'}), 400
 
-        # 处理头像上传
+        # 处理头像
         if 'Uheadshot' in request.files and request.files['Uheadshot'].filename != '':
             file = request.files['Uheadshot']
             if file and allowed_file(file.filename):
@@ -130,12 +139,21 @@ def update_info():
                 file_path = os.path.join(AVATAR_BASE_PATH, filename)
                 file.save(file_path)
 
-                # 将头像转为 base64 存储
                 with open(file_path, "rb") as image_file:
-                    update_data['Uheadshot'] = base64.b64encode(image_file.read()).decode('utf-8')
+                    # 直接保存为二进制数据，不做 base64 编码
+                    update_data['Uheadshot'] = image_file.read()  # 保留为二进制数据
 
-        # 更新用户信息
+                # 之后直接传给 service 层处理
+
+                print(f"[上传头像] Base64 字符长度: {len(update_data['Uheadshot'])}")
+
+
+        # 调用 service 层
         u = User_operation()
+        print("准备传给service层的头像数据是否存在：", bool(update_data.get('Uheadshot')))
+        print("request.files:", request.files)  # 查看里面是否有 Uheadshot
+        print("Uheadshot文件名：", request.files['Uheadshot'].filename if 'Uheadshot' in request.files else "无")
+
         result = u.update_info(
             Uid=user_id,
             Uname=update_data['Uname'],
@@ -145,47 +163,54 @@ def update_info():
             Upassword=update_data['Upassword']
         )
 
-        if result.json['code'] == 0:
-            flash('信息更新成功！', 'success')
+        print('返回前端的数据：', result)
+
+        # 返回 JSON 给前端 AJAX
+        if result['code'] == 0:
+            return jsonify({
+                'success': True,
+                'message': '信息更新成功',
+                'newName': result['data']['Uname'],
+                'newAvatar': url_for('user.get_user_avatar', uid=user_id)
+            })
         else:
-            flash('更新失败，请重试', 'error')
+            return jsonify({'success': False, 'message': result['message']})
 
     except Exception as e:
-        flash('服务器错误，请联系管理员', 'error')
         print(f"更新错误: {str(e)}")
-
-    return redirect(url_for('main.usercenter'))  # 修改后重定向回个人中心页面
+        return jsonify({'success': False, 'message': '服务器异常，请联系管理员'}), 500
 
 
 
 @user.route('/delete_account', methods=['POST'])
-def delete_account(current_user):
+def delete_account():
     try:
+        user_id = session.get('user_id')
+        if not user_id:
+            flash('用户未登录', 'error')
+            return redirect(url_for('user.login'))
+
         u = User_operation()
-        result = u.delete_user(current_user)
+        result = u.delete_user(user_id)
 
         if result.json['code'] != 0:
-            return jsonify({'success': False, 'message': result.json['message']}), 400
+            flash(result.json['message'], 'error')
+            return redirect(url_for('user.usercenter'))  # 删除失败，返回用户中心
 
         session.clear()
-        return jsonify({
-            'success': True,
-            'message': '账号已删除',
-            'redirect': url_for('user.login')
-        }), 200
+        flash('账号已成功删除', 'success')
+        return redirect(url_for('main.homepage'))  # 删除成功，重定向到首页
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        flash('删除失败，请联系管理员', 'error')
+        print(f"删除账号异常：{str(e)}")
+        return redirect(url_for('user.usercenter'))  # 异常情况也返回用户中心
 
 @user.route('/logout', methods=['POST'])
 def logout():
     try:
         session.clear()
-        return jsonify({
-            'success': True,
-            'message': '已退出登录',
-            'redirect': url_for('user.login')
-        }), 200
+        return redirect(url_for('main.homepage'))
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
