@@ -1,6 +1,5 @@
 ---
 
-````markdown
 # 🌾 作物病害通：作物健康识别系统
 
 本项目是一个基于 **Flask + YOLOv8 + VGG** 构建的作物健康识别系统，融合了深度学习图像识别技术与前后端开发能力，能够实现农作物种类自动识别及病害检测，并支持部分病害信息的检索与查看，旨在为农业提供智能化、低门槛的辅助诊断工具。
@@ -49,11 +48,13 @@ pip install -r requirements.txt
 ### 3. 🗂 配置数据库（可选）
 
 本项目提供了数据库结构 SQL 文件，位于 `database/crop_disease.sql`。
+数据库内数据包含用户头像、病害详情图像等，由于文件大小限制，SQL文件仅包含结构，如需要相关数据，请联系我。
 
 可使用以下命令导入：
 
 ```bash
 mysql -u root -p your_database_name < sql/crop_disease.sql
+```
 或使用图形化工具（如 Navicat、DataGrip）打开 crop_disease.sql 文件执行。
 
 ⚠️ 请确保提前创建数据库，并在 app.py 或配置文件中正确填写连接信息。
