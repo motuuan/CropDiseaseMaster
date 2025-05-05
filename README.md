@@ -33,8 +33,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/motuuan/GraduateProject.git
-cd GraduateProject
+git clone https://github.com/motuuan/CropDiseaseMaster.git
+cd CropDiseaseMaster
 ````
 
 ### 2. 安装依赖
